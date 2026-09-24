@@ -1,23 +1,23 @@
 let modInfo = {
-	name: "The ??? Tree",
-	author: "nobody",
+	name: "The SBURB Tree",
+	author: "roxieeeeeeeeeeeeeeeeeeeeeee",
 	pointsName: "points",
 	modFiles: ["layers.js", "tree.js"],
 
 	discordName: "",
 	discordLink: "",
 	initialStartPoints: new Decimal (10), // Used for hard resets and new players
-	offlineLimit: 1,  // In hours
+	offlineLimit: 0,  // In hours
 }
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.0",
-	name: "Literally nothing",
+	num: "0.0413",
+	name: "First Ver!",
 }
 
 let changelog = `<h1>Changelog:</h1><br>
-	<h3>v0.0</h3><br>
+	<h3>v0.0413</h3><br>
 		- Added things.<br>
 		- Added stuff.`
 
@@ -41,7 +41,21 @@ function getPointGen() {
 	if(!canGenPoints())
 		return new Decimal(0)
 
-	let gain = new Decimal(1)
+	let gain = new Decimal((tmp.g.effect))
+	if (hasUpgrade('XP',11)) gain = gain.times(2)
+	if (hasUpgrade('XP',23)) gain = gain.times(10)
+	if (hasUpgrade('XP',12)) gain = gain.times(upgradeEffect('XP',12))
+	if (hasUpgrade('XP',13)) gain = gain.times(upgradeEffect('XP',13))
+	if (hasUpgrade('XP',21)) gain = gain.times(upgradeEffect('XP',21))
+	if (hasMilestone('lvl',0)) 
+	{
+		if(hasMilestone('lvl',1)) { gain = gain.times((player.lvl.points * 2)) }
+		else { gain = gain.times((player.lvl.points)) }
+	}
+	if (hasUpgrade('XP',32)) gain = gain.times(upgradeEffect('XP',32))
+	if (hasUpgrade('XP',35)) gain = gain.times(upgradeEffect('XP',35))
+
+	if (hasUpgrade('XP',33)) gain = gain.pow(upgradeEffect('XP',33))
 	return gain
 }
 
@@ -54,7 +68,8 @@ var displayThings = [
 ]
 
 // Determines when the game "ends"
-function isEndgame() {
+function isEndgame() 
+{
 	return player.points.gte(new Decimal("e280000000"))
 }
 
