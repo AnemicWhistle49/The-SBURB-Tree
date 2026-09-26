@@ -301,7 +301,7 @@ addLayer("lvl", {
         3:
         {
             requirementDescription: "Tier 25: Not-so-bad Weakling",
-            effectDescription: "Unlock Shale and Mercury, you can now bulk Tier Up,\nyou now autobuy XP Upgrades!<br>Also, unlock upgrades for all building materials. (NOT DONE YET)",
+            effectDescription: "Unlock Shale and Mercury, you can now bulk Tier Up,\nyou now autobuy XP Upgrades!<br>Also, unlock upgrades for all building materials.",
             done() { return player.lvl.points.gte(25) }
         },
 
