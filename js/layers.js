@@ -20,8 +20,11 @@ addLayer("XP", {
         if (hasUpgrade('XP',22)) mult = mult.times(upgradeEffect('XP',22))
         if (hasUpgrade('XP',24)) mult = mult.times(3)
         if (hasUpgrade('XP',25)) mult = mult.times(buyableEffect('XP',11))
-        if (hasMilestone('lvl',1)) mult = mult.times(new Decimal(player.lvl.points).pow(0.65))
+        if (hasMilestone('lvl',1)) mult = mult.times(new Decimal(player.lvl.points).pow(0.5))
         if (hasUpgrade('XP',31)) mult = mult.times(upgradeEffect('XP',31))
+        if (hasUpgrade('m',11)) mult = mult.times(upgradeEffect('m',11))
+        if (hasUpgrade('s',15)) mult = mult.times(upgradeEffect('s',15))
+        if (hasUpgrade('a',11)) mult = mult.times(3)
 
         if (hasMilestone('lvl',3)) mult = mult.pow(tmp.s.effect)
         return mult
@@ -39,6 +42,9 @@ addLayer("XP", {
     passiveGeneration() { return (hasMilestone('lvl', 3))?(tmp.m.effect.div(100)):0 },
     
     autoUpgrade() { return (hasMilestone('lvl',3))?1:0 },
+
+    softcap: 1e100,
+    softcapPower: 0.2,
 
     upgrades:
     {
@@ -152,7 +158,7 @@ addLayer("XP", {
         31:
         {
             title:"Build Up",
-            description:"Build up and up, reaching for Gate 1.<br>As you ascend, more and more enemies try to stop you.<br>Of course, this means more XP for you.<br>(Amount of XP Upgrades bought boosts XP gain.)",
+            description:"Build up and up, reaching for Gate 1.<br>(Amount of XP Upgrades bought boosts XP gain.)",
             cost:new Decimal(1e9),
             effect() 
             {
@@ -169,7 +175,7 @@ addLayer("XP", {
             cost: new Decimal(1e13),
             effect() 
             {
-                return player.g.points.pow(0.155)
+                return player.g.points.pow(0.091)
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -222,8 +228,8 @@ addLayer("XP", {
                 setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
             }*/
             title:"More Imps to slay!",
-            cost(x) { return new Decimal(15).pow(x)},
-            effect() { let effect = new Decimal((new Decimal(2).pow(getBuyableAmount(this.layer, this.id))).add(1))
+            cost(x) { return new Decimal(13.5).pow(x)},
+            effect() { let effect = new Decimal((new Decimal(2).pow(getBuyableAmount(this.layer, this.id))))
                 return effect},
             display() { return "Multiplies XP gain by " + format(this.effect()) + "<br>Cost: " + format(this.cost()) + " XP"},
             canAfford() { return player[this.layer].points.gte(this.cost()) },
@@ -301,26 +307,40 @@ addLayer("lvl", {
 
         4:
         {
+            requirementDescription: "Tier 35: Professional Slack Back",
+            effectDescription: "Unlock one more material upgrade for all materials.",
+            done() { return player.lvl.points.gte(35) }
+        },
+
+        5:
+        {
             requirementDescription: "Tier 50: Pebble-Tier",
             effectDescription: "Unlock Alchemy, and more material upgrades!",
             done() { return player.lvl.points.gte(50) }
         },
 
-        5:
+        6:
         {
             requirementDescription: "Tier 100: Holder of Maybe Some Power",
-            effectDescription: "Unlock Challenges, Tiers now do not reset anything.",
+            effectDescription: "Unlock Challenges, Tiers now do not reset anything, Autobuy material upgrades.",
             done() { return player.lvl.points.gte(100) }
         },
 
-        6:
+        7:
         {
-            requirementDescription: "Tier 500: Sandwicher of Knuckles",
-            effectDescription: "More Challenges! Also Tiers are now automated, whether you like it or not!",
-            done() { return player.lvl.points.gte(500) }
+            requirementDescription: "Tier 200: Automation Master",
+            effectDescription: "Tiers are now automated, whether you like it or not!",
+            done() { return player.lvl.points.gte(200) }
         },
 
-        7:
+        8:
+        {
+            requirementDescription: "Tier 250: Bloodbather",
+            effectDescription: "Unlock more in Alchemy and unlock more challenges.",
+            done() { return player.lvl.points.gte(250) }
+        },
+
+        9:
         {
             requirementDescription: "Tier 1000: Potential Man",
             effectDescription: "0.1% of the way there! Unlock more upgrades everywhere and square Rank 1 effect!<br>However.. The Denizens are not liking your fast progress..",
@@ -352,10 +372,21 @@ addLayer("g", {
     exponent: 1,                          // "normal" prestige gain is (currency^exponent).
 
     gainMult() {                            // Returns your multiplier to your gain of the prestige resource.
-        return new Decimal(1)               // Factor in any bonuses multiplying gain here.
+        let mult = new Decimal(1) 
+        if (hasUpgrade('g',12)) mult = mult.times(upgradeEffect('g',12))
+        if (hasUpgrade('g',13)) mult = mult.times(1e3)
+        if (hasUpgrade('g',14)) mult = mult.times(upgradeEffect('g',14))
+        if (hasUpgrade('a',11)) mult = mult.times(3)
+
+
+        if (player['g'].points.gte(new Decimal('1.8e308'))) mult = new Decimal(0)
+        return mult
     },
-    gainExp() {                             // Returns the exponent to your gain of the prestige resource.
-        return new Decimal(1)
+    gainExp() 
+    {                             // Returns the exponent to your gain of the prestige resource.
+        let exp = new Decimal(1)
+        if(hasUpgrade('a',12)) exp = exp.add(0.5)
+        return exp
     },
 
     layerShown() { return hasMilestone('lvl',2) },          // Returns a bool for if this layer's node should be visible in the tree.
@@ -368,8 +399,80 @@ addLayer("g", {
 
     effectDescription() {return "which are boosting base Point gain by +" + format(tmp.g.effect) },
 
-    upgrades: {
-        // Look in the upgrades docs to see what goes here!
+    softcap: new Decimal(1e50),
+    softcapPower: new Decimal(0.25),
+
+    infoboxes:
+    {
+        lore:
+        {
+            title: "How does this work?",
+            body() 
+            {
+                if (player['g'].points.gte(new Decimal("1.8e308"))) { { return "Grist is passively generated from slaying monsters, meaning you do not have to reset for it.<br><span style=\"color: rgb(95, 0, 0)\">" + "HARDCAP! The SBURB client cannot hold any more Grist.. Cannot gain Grist past 1.8e308!</span><br><h2>Formulas</h2><br>Gain: Points/sec<br>Effect: log<sub>10</sub>(Grist)" } }
+                else if(player['g'].points.gte(new Decimal(1e50))) { { return "Grist is passively generated from slaying monsters, meaning you do not have to reset for it.<br><span style=\"color: rgb(255, 0, 0)\">" + "SOFTCAP! Grist is starting to grow scarce in the world already.. Gain past 1e50 is rooted to the fourth power!</span><br><h2>Formulas</h2><br>Gain: Points/sec<br>Effect: log<sub>10</sub>(Grist)" } }
+                else { { return "Grist is passively generated from slaying monsters, meaning you do not have to reset for it.<br><br><h2>Formulas</h2><br>Gain: Points/sec<br>Effect: log<sub>10</sub>(Grist)"} };
+            },
+        }
+    },
+
+    upgrades: 
+    {
+        11:
+        {
+            title:"These will be unoriginal.",
+            description:"Grist boosts point gain.",
+            cost: new Decimal(1e6),
+            effect() 
+            {
+                return player.g.points.log(1.5)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasMilestone('lvl',3)}
+        },
+        12:
+        {
+            title:"The power of dodecahedrons",
+            description:"Boost Grist based on itself.",
+            cost: new Decimal(1e10),
+            effect() 
+            {
+                return player.g.points.plus(100).log(40).pow(1.1)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        13:
+        {
+            title:"Nameless Upgrade",
+            description:"Here's a 1e3x to Grist production.",
+            cost: new Decimal(1e15),
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        14:
+        {
+            title:"Synergysm Mk. G",
+            description:"Grist gain boosted by Shale and Mercury.",
+            cost: new Decimal(1e20),
+            effect() 
+            {
+                return player.s.points.pow(0.035).times(player.m.points.pow(0.075))
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        15:
+        {
+            title:"Softcaps? Already? This sucks.",
+            description:"Point gain boosted based on amount of Grist post softcap.",
+            cost: new Decimal(1e50),
+            effect()
+            {
+                return player.g.points.add(1e50).div(1e50).log(1.5).add(1)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id))+"x"},
+            unlocked() { return hasUpgrade(this.layer,(this.id)-1) && hasMilestone('lvl',4) && player.g.points.gte(1e50)}
+        }
     }
 }),
 
@@ -396,17 +499,27 @@ addLayer("s", {
     exponent: 0.4,                          // "normal" prestige gain is (currency^exponent).
 
     gainMult() {                            // Returns your multiplier to your gain of the prestige resource.
-        return new Decimal(1)               // Factor in any bonuses multiplying gain here.
+        let mult = new Decimal(1) 
+        if (hasUpgrade('s',12)) mult = mult.times(upgradeEffect('s',12))
+        if (hasUpgrade('s',13)) mult = mult.times(10)
+        if (hasUpgrade('s',14)) mult = mult.times(upgradeEffect('s',14))
+        if (hasUpgrade('a',11)) mult = mult.times(3)
+
+        if (player['s'].points.gte(new Decimal('1.8e308'))) mult = new Decimal(0)
+        return mult
     },
-    gainExp() {                             // Returns the exponent to your gain of the prestige resource.
-        return new Decimal(1)
+    gainExp() 
+    {                             // Returns the exponent to your gain of the prestige resource.
+        let exp = new Decimal(1)
+        if(hasUpgrade('a',12)) exp = exp.add(0.27)
+        return exp
     },
 
     layerShown() { return hasMilestone('lvl',3) },          // Returns a bool for if this layer's node should be visible in the tree.
 
     effect() 
     { 
-        let eff = player.s.points.add(10).log(10).div(300).add(1);
+        let eff = player.s.points.add(10).log(10).div(308).add(1);
         return eff
     },
 
@@ -414,8 +527,83 @@ addLayer("s", {
 
     effectDescription() {return "which are raising XP gain to " + format(tmp.s.effect) },
 
-    upgrades: {
-        // Look in the upgrades docs to see what goes here!
+    infoboxes:
+    {
+        lore:
+        {
+            title: "How does this work?",
+            body() 
+            {
+                if (player['s'].points.gte(new Decimal("1.8e308"))) { { return "Shale is too passively generated from slaying monsters, meaning you do not have to reset for it.<br><span style=\"color: rgb(95, 0, 0)\">" + "HARDCAP! The SBURB client cannot hold any more Shale.. Cannot gain Shale past 1.8e308!</span><br><h2>Formulas</h2><br>Gain: Points<sup>0.4</sup>/sec<br>Effect: (log<sub>10</sub>(Shale)/300)+1" } }
+                else if(player['s'].points.gte(new Decimal(1e25))) { { return "Shale is too passively generated from slaying monsters, meaning you do not have to reset for it.<br><span style=\"color: rgb(255, 0, 0)\">" + "SOFTCAP! Shale is starting to grow scarce in the world already.. Gain past 1e25 is rooted to the third power!</span><br><h2>Formulas</h2><br>Gain: Points<sup>0.4</sup>/sec<br>Effect: (log<sub>10</sub>(Shale)/300)+1" } }
+                else { { return "Shale is too passively generated from slaying monsters, meaning you do not have to reset for it.<br><br><h2>Formulas</h2><br>Gain: Points<sup>0.4</sup>/sec<br>Effect: (log<sub>10</sub>(Shale)/300)+1"} };
+            
+                
+                //return "Shale is too passively generated from slaying monsters, meaning you do not have to reset for it.<br><br><h2>Formulas</h2><br>Gain: Points<sup>0.4</sup>/sec<br>Effect: (log<sub>10</sub>(Shale)/300)+1"
+            },
+        },
+    },
+
+    softcap: new Decimal(1e25),
+    softcapPower: new Decimal(0.3),
+
+    upgrades: 
+    {
+        11:
+        {
+            title:"More!",
+            description:"Shale boosts point gain.",
+            cost: new Decimal(1e6),
+            effect() 
+            {
+                return player.s.points.log(1.35)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasMilestone('lvl',3)}
+        },
+        12:
+        {
+            title:"Self-Production",
+            description:"Boost Shale based on itself.",
+            cost: new Decimal(1e10),
+            effect() 
+            {
+                return player.s.points.plus(100).log(25).pow(1.1)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        13:
+        {
+            title:"Flat boosts suck",
+            description:"Yeah. But I digress, here's a 10x to Shale production.",
+            cost: new Decimal(1e15),
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        14:
+        {
+            title:"Synergysm Mk. S",
+            description:"Shale gain boosted by Grist and Mercury.",
+            cost: new Decimal(1e20),
+            effect() 
+            {
+                return player.g.points.pow(0.015).times(player.m.points.pow(0.075))
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        15:
+        {
+            title:"Grape Flavour",
+            description:"XP gain boosted based on amount of Shale post softcap.",
+            cost: new Decimal(1e25),
+            effect()
+            {
+                return player.s.points.add(1e25).div(1e25).log(1.75).add(1)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id))+"x"},
+            unlocked() { return hasUpgrade(this.layer,(this.id)-1) && hasMilestone('lvl',4) && player.s.points.gte(1e25)}
+        }
     }
 }),
 
@@ -441,6 +629,136 @@ addLayer("m", {
     type: "normal",                         // Determines the formula used for calculating prestige currency.
     exponent: 0.1,                          // "normal" prestige gain is (currency^exponent).
 
+    gainMult() 
+    {
+        let mult = new Decimal(1)
+        if (hasUpgrade('m',12)) mult = mult.times(upgradeEffect('m',12))
+        if (hasUpgrade('m',13)) mult = mult.times(2)
+        if (hasUpgrade('m',14)) mult = mult.times(upgradeEffect('m',14))
+        if (hasUpgrade('a',11)) mult = mult.times(3)
+
+        if (player['m'].points.gte(new Decimal('1.8e308'))) mult = new Decimal(0) 
+        return mult               
+    },
+    gainExp() 
+    {
+        let exp = new Decimal(1)
+        if(hasUpgrade('a',12)) exp = exp.add(0.23)
+        return exp
+    },
+
+    layerShown() { return hasMilestone('lvl',3) },          // Returns a bool for if this layer's node should be visible in the tree.
+
+    effect() 
+    { 
+        let eff = player.m.points.add(16).log(16);
+        if(hasUpgrade(this.layer,15)) eff = eff.times(upgradeEffect('m',15))
+        if(hasUpgrade('a',14)) eff = eff.times(upgradeEffect('a',14))
+        return eff
+    },
+
+    softcap: new Decimal(1e10),
+    softcapPower: new Decimal(0.5),
+
+    passiveGeneration() {return hasMilestone('lvl',3)},
+
+    effectDescription() {return "which are passively generating " + format(tmp.m.effect) +"% of XP every second." },
+
+    infoboxes:
+    {
+        lore:
+        {
+            title: "How does this work?",
+            body()
+            {
+                if (player['m'].points.gte(new Decimal("1.8e308"))) { { return "Mercury, like other materials, are passively generated from slaying monsters, meaning you do not have to reset for it.<br>It's toxic nature passively kills monsters, earning you XP passively.<br><span style=\"color: rgb(95, 0, 0)\">" + "HARDCAP! The SBURB client cannot hold any more Mercury.. Cannot gain Mercury past 1.8e308!</span><br><h2>Formulas</h2><br>Gain: Points<sup>0.1</sup>/sec<br>Effect: log<sub>16</sub>(Mercury)" } }
+                else if(player['m'].points.gte(new Decimal(1e10))) { { return "Mercury, like other materials, are passively generated from slaying monsters, meaning you do not have to reset for it.<br>It's toxic nature passively kills monsters, earning you XP passively.<br><span style=\"color: rgb(255, 0, 0)\">" + "SOFTCAP! Mercury is starting to grow scarce in the world already.. Gain past 1e10 is square rooted!</span><br><h2>Formulas</h2><br>Gain: Points<sup>0.1</sup>/sec<br>Effect: log<sub>16</sub>(Mercury)" } }
+                else { { return "Mercury, like other materials, are passively generated from slaying monsters, meaning you do not have to reset for it.<br>It's toxic nature passively kills monsters, earning you XP passively.<br><h2>Formulas</h2><br>Gain: Points<sup>0.1</sup>/sec<br>Effect: log<sub>16</sub>(Mercury)"} };
+            }
+            
+            //body() {return "Mercury, like other materials, are passively generated from slaying monsters, meaning you do not have to reset for it.<br>It's toxic nature passively kills monsters, earning you XP passively.<br>More Mercury=Higher XP rate.<br><br><h2>Formulas</h2><br>Gain: Points<sup>0.1</sup>/sec<br>Effect: log<sub>16</sub>(Mercury)"},
+        },
+    },
+
+    
+
+    upgrades: 
+    {
+        11:
+        {
+            title:"Deudlier",
+            description:"You're drenched in Mercury..<br>XP gain boosted by Mercury.",
+            cost: new Decimal(10000),
+            effect() 
+            {
+                return player.m.points.div(4).log(1.05).pow(0.5)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasMilestone('lvl',3)}
+        },
+        12:
+        {
+            title:"Can this thing scale any better?",
+            description:"No. But here's a little boost to its gain based on itself.",
+            cost: new Decimal(100000),
+            effect() 
+            {
+                return player.m.points.log(16).pow(1.1)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        13:
+        {
+            title:"Wow, this is useless.",
+            description:"Double Mercury gain",
+            cost: new Decimal(1e6),
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        14:
+        {
+            title:"Synergysm Mk. M",
+            description:"Mercury gain boosted by Grist and Shale.",
+            cost: new Decimal(2.5e7),
+            effect() 
+            {
+                return player.g.points.pow(0.015).times(player.s.points.pow(0.035))
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+            unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        15:
+        {
+            title:"Amalgams",
+            description:"Mercury effect boosted by amount of Mercury post softcap.",
+            cost: new Decimal(1e10),
+            effect()
+            {
+                return player.m.points.add(1e10).div(1e10).log(10).pow(0.65).add(1)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id))+"x"},
+            unlocked() { return hasUpgrade(this.layer,(this.id)-1) && hasMilestone('lvl',4) && player.m.points.gte(1e10)}
+        }
+    }
+},
+),
+
+addLayer("a", {
+    startData() { return {                  // startData is a function that returns default data for a layer. 
+        unlocked: true,                     // You can add more variables here to add them to your layer.
+        points: new Decimal(0),             // "points" is the internal name for the main resource of the layer.
+    }},
+
+    color: "#ffffff",                       // The color for this layer, which affects many elements.
+    resource: "Alchemy",            // The name of this layer's main prestige resource.
+    row: 1,                                 // The row this layer is on (0 is the first row).
+
+    baseResource: "points",                 // The name of the resource your prestige gain is based on.
+    baseAmount() { return player.points },  // A function to return the current amount of baseResource.
+
+    type: "none",                         // Determines the formula used for calculating prestige currency.
+    exponent: 0.5,                          // "normal" prestige gain is (currency^exponent).
+
     gainMult() {                            // Returns your multiplier to your gain of the prestige resource.
         return new Decimal(1)               // Factor in any bonuses multiplying gain here.
     },
@@ -448,19 +766,163 @@ addLayer("m", {
         return new Decimal(1)
     },
 
-    layerShown() { return hasMilestone('lvl',3) },          // Returns a bool for if this layer's node should be visible in the tree.
+    layerShown() {return hasMilestone('lvl',5)}, 
 
-    effect() 
-    { 
-        let eff = player.m.points.add(20).log(20);
-        return eff
+    branches: ['g','s','m'],
+
+    upgrades: 
+    {
+        11:
+        {
+            title:"The Boundful of Caps",
+            description:"Looks like a sword made out of bottle caps. <br>Funny, because it costs as much as the softcaps for materials. <br>Not very effective, but triples XP, Grist, Shale and Mercury gain.<br><br> Costs: 1e50 Grist, <br>1e25 Shale, <br>1e10 Mercury.",
+            costs: 
+            {
+                g: 1e50,
+                s: 1e25,
+                m: 1e10
+            },
+            canAfford() 
+            {
+                return player.g.points.gte(this.costs.g)
+                && player.s.points.gte(this.costs.s)
+                && player.m.points.gte(this.costs.m)
+            },
+            buy() 
+            {
+                player.g.points = player.g.points.minus(this.costs.g);
+                player.s.points = player.s.points.minus(this.costs.s);
+                player.m.points = player.m.points.minus(this.costs.m);
+            },
+            unlocked() { return player.m.points.gte(1e10) || hasUpgrade(this.layer,this.id)}
+        },
+
+        12:
+        {
+            title:"Self-Replicative Looter",
+            description:"Now we're talking. Replicates the materials dropped upon slaying monsters, essentially making more of it. Makes the material softcaps slightly less brutal.<br><br> Costs: 1e55 Grist, <br>2.5e27 Shale, <br>1e11 Mercury.",
+            costs: 
+            {
+                g: 1e55,
+                s: 2.5e27,
+                m: 1e11
+            },
+            canAfford() 
+            {
+                return player.g.points.gte(this.costs.g)
+                && player.s.points.gte(this.costs.s)
+                && player.m.points.gte(this.costs.m)
+            },
+            buy() 
+            {
+                player.g.points = player.g.points.minus(this.costs.g);
+                player.s.points = player.s.points.minus(this.costs.s);
+                player.m.points = player.m.points.minus(this.costs.m);
+            },
+            unlocked() { return hasUpgrade(this.layer,(this.id)-1)}
+        },
+
+        13:
+        {
+            title:"Untangible Replicator",
+            description:"You cannot quite see this one. However, you feel as if it boosts your point gain by itself.. Whats the deal with this replication anyway? You have a bad feeling about this..<br><br> Costs: 1e65 Grist, <br>1e31 Shale, <br>2.5e13 Mercury.<br>",
+            costs: 
+            {
+                g: 1e65,
+                s: 1e31,
+                m: 2.5e13
+            },
+            canAfford() 
+            {
+                return player.g.points.gte(this.costs.g)
+                && player.s.points.gte(this.costs.s)
+                && player.m.points.gte(this.costs.m)
+            },
+            buy() 
+            {
+                player.g.points = player.g.points.minus(this.costs.g);
+                player.s.points = player.s.points.minus(this.costs.s);
+                player.m.points = player.m.points.minus(this.costs.m);
+            },
+            effect()
+            {
+                return player.points.log(1.1).log(1.05).log(1.03).log(1.01)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id))+"x"},
+            unlocked() { return hasUpgrade(this.layer,(this.id)-1)}
+        },
+
+        14:
+        {
+            title:"Replicative Obliterator",
+            description:"You feel a heavy sense of Deja Vu. But I digress, this one is made out of Mercury, making Mercury's effect slightly even stronger based on XP.<br><br>Costs: 1e14 Mercury.",
+            costs: 
+            {
+                m: 1e14
+            },
+            canAfford() 
+            {
+                return player.m.points.gte(this.costs.m)
+            },
+            buy() 
+            {
+                player.m.points = player.m.points.minus(this.costs.m);
+            },
+            effect()
+            {
+                return player.XP.points.log(10).pow(0.1)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id))+"x"},
+            unlocked() { return hasUpgrade(this.layer,(this.id)-1)}
+        },
+        
+        15:
+        {
+            title() 
+            {
+                if(!hasUpgrade(this.layer,this.id)) return "??????????"
+                return "Replicanti"
+            },
+            description()
+            {
+                if(!hasUpgrade(this.layer,this.id)) return "What is this..? Looks like you can't preview what you're making..<br>Unlocks a new side layer.<br><br>Costs: 1e73 Grist<br>5e34 Shale<br>5e14 Mercury<br>1e62 XP<br>1e85 Points.."
+                return "Oh no.. You knew this was coming.. Welp. It's too late now. The Replication has already started. [Not really tho. End of the line rn, Replicanti update soon enough i hope]"
+            },
+            costs: 
+            {
+                g: 1e73,
+                s: 1e34,
+                m: 5e14,
+                XP: 1e62,
+                points: 1e85
+            },
+            canAfford() 
+            {
+                return player.g.points.gte(this.costs.g)
+                && player.s.points.gte(this.costs.s)
+                && player.m.points.gte(this.costs.m)
+                && player.XP.points.gte(this.costs.XP)
+                && player.points.gte(this.costs.points)
+            },
+            buy() 
+            {
+                player.g.points = player.g.points.minus(this.costs.g);
+                player.s.points = player.s.points.minus(this.costs.s);
+                player.m.points = player.m.points.minus(this.costs.m);
+                player.XP.points = player.XP.points.minus(this.costs.XP);
+                player.points = player.points.minus(this.costs.points);
+            },
+            unlocked() { return hasUpgrade(this.layer,(this.id)-1)}
+        }
     },
 
-    passiveGeneration() {return hasMilestone('lvl',3)},
-
-    effectDescription() {return "which are passively generating " + format(tmp.m.effect) +"% of XP every second." },
-
-    upgrades: {
-        // Look in the upgrades docs to see what goes here!
-    }
-})
+    infoboxes:
+    {
+        lore:
+        {
+            title: "What is this layer?",
+            body() { return "Well.. Not really a layer by any means.<br> Here, you will find upgrades that cost materials (Grist, Shale and/or Mercury) that boost a whole lotta stuff! As well as unlock a whole lotta stuff.. Who knows."}
+        },
+    },
+}
+)

@@ -12,14 +12,18 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.0413",
-	name: "First Ver!",
+	num: "0.1",
+	name: "Alchemy Update",
 }
 
 let changelog = `<h1>Changelog:</h1><br>
 	<h3>v0.0413</h3><br>
 		- Added things.<br>
-		- Added stuff.`
+		- Added stuff.
+		<h3>v0.1</h3><br>
+		- Added Material Upgrades<br>
+		- Added Alchemy and its upgrades<br>
+		- Balanced until ??????????`
 
 let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
 
@@ -54,6 +58,8 @@ function getPointGen() {
 	}
 	if (hasUpgrade('XP',32)) gain = gain.times(upgradeEffect('XP',32))
 	if (hasUpgrade('XP',35)) gain = gain.times(upgradeEffect('XP',35))
+	if (hasUpgrade('g',15)) gain = gain.times(upgradeEffect('g',15))
+	if (hasUpgrade('a',13)) gain = gain.times(upgradeEffect('a',13))
 
 	if (hasUpgrade('XP',33)) gain = gain.pow(upgradeEffect('XP',33))
 	return gain
