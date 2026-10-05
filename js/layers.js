@@ -43,9 +43,6 @@ addLayer("XP", {
     
     autoUpgrade() { return (hasMilestone('lvl',3))?1:0 },
 
-    softcap: 1e100,
-    softcapPower: 0.2,
-
     upgrades:
     {
         11:
@@ -162,7 +159,7 @@ addLayer("XP", {
             cost:new Decimal(1e9),
             effect() 
             {
-                let eff = Decimal.pow(1.4, player.XP.upgrades.length);
+                let eff = Decimal.add(1).pow(1.4, player.XP.upgrades.length);
                 return eff;
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
@@ -175,7 +172,7 @@ addLayer("XP", {
             cost: new Decimal(1e13),
             effect() 
             {
-                return player.g.points.pow(0.091)
+                return player.g.points.add(1).pow(0.091)
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -187,7 +184,7 @@ addLayer("XP", {
             cost: new Decimal(1e15),
             effect() 
             {
-                return player.XP.points.log(22).div(150).add(1)
+                return player.XP.points.add(22).log(22).div(150).add(1)
             },
             effectDisplay() { return "^"+format(upgradeEffect(this.layer, this.id)) },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -218,25 +215,27 @@ addLayer("XP", {
         11:
         {
             unlocked() {return hasUpgrade(this.layer,25)},
-
-            /*cost(x) { return new Decimal(1).mul(x) },
-            display() { return "Blah" },
-            canAfford() { return player[this.layer].points.gte(this.cost()) },
-            buy() 
-            {
-                player[this.layer].points = player[this.layer].points.sub(this.cost())
-                setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
-            }*/
             title:"More Imps to slay!",
             cost(x) { return new Decimal(13.5).pow(x)},
             effect() { let effect = new Decimal((new Decimal(2).pow(getBuyableAmount(this.layer, this.id))))
                 return effect},
-            display() { return "Multiplies XP gain by " + format(this.effect()) + "<br>Cost: " + format(this.cost()) + " XP"},
+            display() 
+            {
+                if(getBuyableAmount(this.layer,this.id).gte(50))
+                {
+                    return "Multiplies XP gain by " + format(this.effect()) + "<br><br>Cost: " + format(this.cost()) + " XP<br><br>Limit reached!<br>Sorry, any more would lead to extinction!"
+                }
+                else {return "Multiplies XP gain by " + format(this.effect()) + "<br><br>Cost: " + format(this.cost()) + " XP"}
+            },
             canAfford() { return player[this.layer].points.gte(this.cost()) },
             buy() 
             {
                 player[this.layer].points = player[this.layer].points.sub(this.cost())
                 setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
+            },
+            purchaseLimit()
+            {
+                return 50;
             }
         }
     }
@@ -257,7 +256,32 @@ addLayer("lvl", {
     baseAmount() {return player.XP.points}, // Get the current amount of baseResource
     type: "static", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
     exponent: 1, // Prestige currency exponent
-    base:10,
+
+    infoboxes:
+    {
+        lore:
+        {
+            title:"What happened here?",
+            body()
+            {
+                return "Level gain past 50 is.. not softcapped, just gets a new, brutal formula.<br>Before: 10<sup>(Tiers)</sup><br>Now: (1.163<sup>Tiers</sup>)<sup>Tiers</sup>"
+            },
+            unlocked() {return player[this.layer].points.gte(new Decimal(50))}
+        }
+    },
+
+
+    base()
+    {
+        if(player[this.layer].points.gte(new Decimal(49)))
+        {
+            return new Decimal(1.163).pow(player.lvl.points)
+        }
+        else
+        {
+            return 10
+        }
+    },
 
 
     gainMult() { // Calculate the multiplier for main currency from bonuses
@@ -385,7 +409,7 @@ addLayer("g", {
     gainExp() 
     {                             // Returns the exponent to your gain of the prestige resource.
         let exp = new Decimal(1)
-        if(hasUpgrade('a',12)) exp = exp.add(0.5)
+        // if(hasUpgrade('a',12)) exp = exp.add(0.5)
         return exp
     },
 
@@ -400,7 +424,12 @@ addLayer("g", {
     effectDescription() {return "which are boosting base Point gain by +" + format(tmp.g.effect) },
 
     softcap: new Decimal(1e50),
-    softcapPower: new Decimal(0.25),
+
+    softcapPower()
+    {
+        if (hasUpgrade('a',12)) { return new Decimal(0.35) }
+        else { return new Decimal(0.25) }
+    },
 
     infoboxes:
     {
@@ -425,7 +454,7 @@ addLayer("g", {
             cost: new Decimal(1e6),
             effect() 
             {
-                return player.g.points.log(1.5)
+                return player.g.points.add(1.5).log(1.5)
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasMilestone('lvl',3)}
@@ -437,7 +466,7 @@ addLayer("g", {
             cost: new Decimal(1e10),
             effect() 
             {
-                return player.g.points.plus(100).log(40).pow(1.1)
+                return player.g.points.plus(40).log(40).pow(1.1)
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -456,7 +485,7 @@ addLayer("g", {
             cost: new Decimal(1e20),
             effect() 
             {
-                return player.s.points.pow(0.035).times(player.m.points.pow(0.075))
+                return player.s.points.add(1).pow(0.035).times(player.m.points.pow(0.075))
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -556,7 +585,7 @@ addLayer("s", {
             cost: new Decimal(1e6),
             effect() 
             {
-                return player.s.points.log(1.35)
+                return player.s.points.add(1.35).log(1.35)
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasMilestone('lvl',3)}
@@ -568,7 +597,7 @@ addLayer("s", {
             cost: new Decimal(1e10),
             effect() 
             {
-                return player.s.points.plus(100).log(25).pow(1.1)
+                return player.s.points.plus(25).log(25).pow(1.1)
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -587,7 +616,7 @@ addLayer("s", {
             cost: new Decimal(1e20),
             effect() 
             {
-                return player.g.points.pow(0.015).times(player.m.points.pow(0.075))
+                return player.g.points.add(1).pow(0.015).times(player.m.points.pow(0.075))
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -691,7 +720,7 @@ addLayer("m", {
             cost: new Decimal(10000),
             effect() 
             {
-                return player.m.points.div(4).log(1.05).pow(0.5)
+                return player.m.points.add(4).div(4).log(1.05).pow(0.5)
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasMilestone('lvl',3)}
@@ -703,7 +732,7 @@ addLayer("m", {
             cost: new Decimal(100000),
             effect() 
             {
-                return player.m.points.log(16).pow(1.1)
+                return player.m.points.add(16).log(16).pow(1.1)
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -722,7 +751,7 @@ addLayer("m", {
             cost: new Decimal(2.5e7),
             effect() 
             {
-                return player.g.points.pow(0.015).times(player.s.points.pow(0.035))
+                return player.g.points.add(1).pow(0.015).times(player.s.points.pow(0.035))
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
             unlocked() {return hasUpgrade(this.layer,(this.id)-1)}
@@ -750,8 +779,9 @@ addLayer("a", {
     }},
 
     color: "#ffffff",                       // The color for this layer, which affects many elements.
-    resource: "Alchemy",            // The name of this layer's main prestige resource.
+    resource: "Alchemy Levels",            // The name of this layer's main prestige resource.
     row: 1,                                 // The row this layer is on (0 is the first row).
+    tooltip: "Alchemy",
 
     baseResource: "points",                 // The name of the resource your prestige gain is based on.
     baseAmount() { return player.points },  // A function to return the current amount of baseResource.
@@ -794,7 +824,7 @@ addLayer("a", {
                 player.s.points = player.s.points.minus(this.costs.s);
                 player.m.points = player.m.points.minus(this.costs.m);
             },
-            unlocked() { return player.m.points.gte(1e10) || hasUpgrade(this.layer,this.id)}
+            unlocked() { return player.m.points.gte(1e10) || hasUpgrade(this.layer,this.id) || hasUpgrade(this.layer,(this.id)+1)}
         },
 
         12:
@@ -846,7 +876,7 @@ addLayer("a", {
             },
             effect()
             {
-                return player.points.log(1.1).log(1.05).log(1.03).log(1.01)
+                return player.points.add(1.1).log(1.1).add(1.05).log(1.05).add(1.03).log(1.03).add(1.01).log(1.01)
             },
             effectDisplay() { return format(upgradeEffect(this.layer,this.id))+"x"},
             unlocked() { return hasUpgrade(this.layer,(this.id)-1)}
@@ -870,7 +900,7 @@ addLayer("a", {
             },
             effect()
             {
-                return player.XP.points.log(10).pow(0.1)
+                return player.XP.points.add(10).log(10).pow(0.1)
             },
             effectDisplay() { return format(upgradeEffect(this.layer,this.id))+"x"},
             unlocked() { return hasUpgrade(this.layer,(this.id)-1)}
@@ -924,5 +954,419 @@ addLayer("a", {
             body() { return "Well.. Not really a layer by any means.<br> Here, you will find upgrades that cost materials (Grist, Shale and/or Mercury) that boost a whole lotta stuff! As well as unlock a whole lotta stuff.. Who knows."}
         },
     },
+}
+),
+
+addLayer("r", 
+    {
+    startData() { 
+        return {                  // startData is a function that returns default data for a layer. 
+            unlocked: true,                     // You can add more variables here to add them to your layer.
+            points: new Decimal(1),
+
+            replicantiXPMult: new Decimal(1),
+            replicantiGMult: new Decimal(1),
+            replicantiSMult: new Decimal(1),
+            replicantiMMult: new Decimal(1),
+            replicantiPMult: new Decimal(1),
+
+            replicantiChance: new Decimal(1),
+            replicantiTime: new Decimal(1),
+            replicantiInterval: new Decimal(1),
+            replicantiMultMult: new Decimal(1)
+        }},
+    symbol:"Ξ",
+    color: "#07164f",                       // The color for this layer, which affects many elements.
+    resource: "Replicanti",            // The name of this layer's main prestige resource.
+    row: 1,                                 // The row this layer is on (0 is the first row).
+
+    baseResource: "replicanti",                 // The name of the resource your prestige gain is based on.
+    baseAmount() { return player.r.points },  // A function to return the current amount of baseResource.
+
+    requires: new Decimal(1),            
+
+    type: "normal",                         // Determines the formula used for calculating prestige currency.
+    exponent: 1,                          // "normal" prestige gain is (currency^exponent).
+
+    branches: ['a'],
+    
+    update(delta)
+    {
+        /*let timeSecond = new Decimal(1)
+
+        player.r.replicantiTime = player.r.replicantiTime.add(timeSecond.mul(delta))
+        if(player.r.replicantiTime.gte(player.r.replicantiInterval))
+        {
+            player.r.replicantiTime = new Decimal(0);
+            player.r.points = player.r.points.mul(new Decimal(player.r.replicantiChance))
+        }*/
+    },
+
+    gainMult() 
+    {
+        let mult = new Decimal(1)
+        if(hasUpgrade(this.layer,11)) mult = mult.mul(upgradeEffect(this.layer,11))
+        if(hasUpgrade(this.layer,12)) mult = mult.mul(new Decimal(1.2))
+        if(hasUpgrade(this.layer,22)) mult = mult.mul(upgradeEffect(this.layer,22))
+
+        player.r.replicantiMultMult = mult
+        return mult
+    },
+
+    gainExp() {                             // Returns the exponent to your gain of the prestige resource.
+        return new Decimal(1)
+    },
+
+    passiveGeneration() 
+    {
+        let replication = new Decimal(1)
+        replication = replication.times(player.r.replicantiChance.div(100))
+        replication = replication.times(player.r.replicantiInterval.reciprocal())
+
+        if(player.r.points.gte(new Decimal(1.79e308))) 
+        {
+            replication = 0
+            player.r.points = new Decimal(1.79e308)
+        }
+
+        return replication
+    },
+
+    replicantiXPMult()
+    {
+        player.r.replicantiXPMult = new Decimal(player.r.points.add(2).log(2).pow(2))
+    },
+    replicantiGMult()
+    {
+        player.r.replicantiGMult = new Decimal(player.r.points.add(3).log(3).pow(1.75))
+    },
+    replicantiSMult()
+    {
+        player.r.replicantiSMult = new Decimal(player.r.points.add(4).log(4).pow(1.5))
+    },
+    replicantiMMult()
+    {
+        player.r.replicantiMMult = new Decimal(player.r.points.add(5).log(5).pow(1.25))
+    },
+    replicantiPMult()
+    {
+        player.r.replicantiPMult = new Decimal(player.r.points.add(1.5).log(1.5).pow(2.5))
+    },
+
+    replicantiTime()
+    {
+        if(player.r.replicantiTime.gte(player.r.replicantiInterval))
+        {
+            player.r.replicantiTime = new Decimal(0);
+            layers.r.replicate();
+        }
+    },
+
+    replicantiChance()
+    {
+        let ch = new Decimal(1)
+        ch = ch.add(buyableEffect(this.layer,11))
+        player.r.replicantiChance = ch
+    },
+
+    infoboxes:
+    {
+        lore:
+        {
+            title: "...Why?",
+            body() { return "Got an idea, let's lazily reuse a feature from another game! That seems cool!<br>Isn't it just the most Homestuck thing to do?<br>Anyways, Replicanti behave exactly like they do in AD.<br>But who knows, maybe they're the key to breaking your limits.. Have fun!"},
+        },
+        limits:
+        {
+            title: "Current Limits",
+            body()
+            {
+                return "lalala"
+            }
+        }
+    },
+
+    /*bars:
+    {
+        repliBar:
+        {
+            unlocked: true,
+            direction: RIGHT,
+            width: 476,
+            height: 50,
+            progress()
+            {
+                return player.r.points
+            },
+            baseStyle: {backgroundColor: "rgba(0, 217, 255, 0.11)"},
+            fillStyle: {backgroundColor: "#193ceb"},
+            display()
+            {
+                return "Time:" + formatTime(player.r.replicantiTime) + "/" + formatTime(player.r.replicantiInterval)
+            }
+        }
+    },*/
+
+    layerShown() { return hasUpgrade('a',15) },
+
+    clickables:
+    {
+        11:
+        {
+            title: "Annihilate (Unstuck)",
+            display() { return "Sets Replicanti to 1, only doable when replicanti are <1"},
+            canClick() { return player.r.points.lt(new Decimal(1))},
+            onClick() { return player.r.points.fromNumber(1)}
+        }
+    },
+
+    milestones:
+    {
+        //////////////////////////////// OVERFLOW MILESTONES /////////////////////////////////
+        O1:
+        {
+            requirementDescription: "<br>Test!",
+            effectDescription: "Test!.",
+            done() {return player.r.points.gte(new Decimal(1.79e1000))},
+            style: {width: "600px", height: "85px", color: "rgba(0,0,0,0.5)", border: "5px solid rgba(0,0,0,0.5)", borderRadius: "10px", margin: "-2.5px"},
+        }
+    },
+
+    upgrades:
+    {
+        11:
+        {
+            title: "I hate this already.",
+            description: "x1.1 Replicanti gain for every Replicanti upgrade bought!",
+            cost() { return new Decimal(1)},
+            effect() 
+            {
+                if(hasUpgrade(this.layer,23))
+                return new Decimal(new Decimal(1.1).add(upgradeEffect(this.layer,23))).pow(player.r.upgrades.length)
+                else
+                return new Decimal(new Decimal(1.1)).pow(player.r.upgrades.length)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" },
+        },
+        12:
+        {
+            title: "Guess this is my life now.",
+            description: "Yup. x1.2 to Replicanti gain.",
+            cost() { return new Decimal(2) },
+        },
+        13:
+        {
+            title: "Idk what to name these upgrades, really.",
+            description: "Does nothing.",
+            cost() { return new Decimal(5) },
+        },
+        14:
+        {
+            title: "What do you mean that one does nothing?",
+            description: "Yeah, does nothing. Anyways, x1 Replicanti gain.",
+            cost() { return new Decimal(10) },
+            effect()
+            {
+                return new Decimal(1)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id)) + "x" },
+        },
+        15:
+        {
+            title: "...",
+            description: "Alright, next row will actually have good ones.",
+            cost() { return new Decimal(25) },
+        },
+        21:
+        {
+            title: "De-Timewaller",
+            description: "Unlock Replicanti Chance Upgrader",
+            cost() { return new Decimal(100) },
+            unlocked() { return hasUpgrade(this.layer,15)}
+        },
+        22:
+        {
+            title: "Self-replicative Replicanti",
+            description: "Aren't they already? Anyways, boost Replicanti gain based on itself.",
+            cost() { return new Decimal(500) },
+            effect()
+            {
+                return Decimal.max(new Decimal(1) , player.r.points.log(2).log(2))
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id)) + "x" }
+        },
+        23:
+        {
+            title: "Skyrocketing..",
+            description: "+0.005 to the 'I hate this already.' formula for every Replicanti upgrade.",
+            cost() { return new Decimal(1e6) },
+            effect()
+            {
+                if(hasUpgrade(this.layer,33))
+                return new Decimal(player.r.upgrades.length).mul(new Decimal(0.005).add(upgradeEffect(this.layer,33)))
+                else
+                return new Decimal(player.r.upgrades.length).mul(0.005)
+            },
+            effectDisplay() { return "+" + format(upgradeEffect(this.layer,this.id)) }
+        },
+        24:
+        {
+            title: "Repetition",
+            description: "Yet again, Replicanti boost themselves.",
+            cost() { return new Decimal(1e15) },
+            effect()
+            {
+                return Decimal.max(new Decimal(1) , player.r.points.log(5).log(5))
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id)) + "x" }
+        },
+        31:
+        {
+            title: "De-Timewaller 2",
+            description: "Unlock the Replicanti Interval Upgrader",
+            cost() { return new Decimal(1e50) },
+        },
+        32:
+        {
+            title: "Replicanti got stronger.",
+            description: "Power the first five Replicanti effects to a power based on Replicanti (Caps at ^2)",
+            cost() { return new Decimal(1e75) },
+            effect()
+            {
+                return Decimal.min(new Decimal(2), Decimal.max(1 , player.r.points.log(10).log(10).pow(0.1)))
+            },
+            effectDisplay() { return "^" + format(upgradeEffect(this.layer,this.id)) }
+        },
+        33:
+        {
+            title: "Inflation",
+            description: "+0.0001 to the 'Skyrocketing..' formula for every Replicanti upgrade.",
+            cost() { return new Decimal(1e100) },
+            effect()
+            {
+                return new Decimal(player.r.upgrades.length).mul(0.0001)
+            },
+            effectDisplay() { return "+" + format(upgradeEffect(this.layer,this.id)) }
+        },
+        41:
+        {
+            title: "Repetition..",
+            description: "You know the deal by now.",
+            cost() { return new Decimal(1e150) },
+            effect()
+            {
+                return Decimal.max(new Decimal(1) , player.r.points.log(7.5).log(7.5))
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id)) + "x" }
+        },
+        42:
+        {
+            title: "Repetition.....",
+            description: "More..",
+            cost() { return new Decimal(1e175) },
+            effect()
+            {
+                return Decimal.max(new Decimal(1) , player.r.points.log(10).log(10))
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id)) + "x" }
+        },
+        51:
+        {
+            title: "Replication.",
+            description: "Replicanti gain softcapped based on itself.. but.. Replicanti gain past the softcap boosts itself.",
+            cost() { return new Decimal(1e200) },
+            effect()
+            {
+                return Decimal.max(new Decimal(1) , player.r.points.div(1e200).log(15))
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id)) + "x" }
+        },
+        
+
+        /* 12:
+        {
+            title: " ",
+            description: " ",
+            cost() { return new Decimal() },
+            effect()
+            {
+                return new Decimal()
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer,this.id)) + "x" }
+        }, */
+    },
+
+    buyables:
+    {
+        11:
+        {
+            title: "Replicanti Chance Upgrader",
+            cost(x) { return new Decimal(10).pow(getBuyableAmount(this.layer, this.id)) },
+            effect() 
+            { let eff = new Decimal(getBuyableAmount(this.layer, this.id).div(10)) 
+            return eff },
+            display() { return "Adds +" + format(this.effect()) + "% to Replicanti Chance<br>Purchases: " + format(getBuyableAmount(this.layer,this.id)) + "/990<br><br>Costs: " + format(this.cost()) + " Replicanti"},
+            canAfford() { return player[this.layer].points.gte(this.cost()) },
+            buy() 
+            {
+                player[this.layer].points = player[this.layer].points.sub(this.cost())
+                setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
+            },
+            purchaseLimit()
+            {
+                return new Decimal(990)
+            },
+            unlocked() {return hasUpgrade(this.layer,21) },
+            sellAll() { return setBuyableAmount(this.layer,this.id,0) },
+            canSellAll() {return true}
+        }
+    },
+
+    tabFormat:
+    {
+        "Replicanti":
+        {
+            buttonStyle() { return { color: "white", background: "#05415c", borderColor: "#086894", borderRadius: "5px" } },
+            content: 
+            [
+                ["blank", "10px"],
+                ["raw-html", () => { return "You currently have <h2>" + format(player.r.points) + "</h2> replicanti."}, { "color": "white", "font-size": "16px", "font-family": "monospace" }],
+                ["raw-html", () => { return "Which boost: XP gain by " + format(player.r.replicantiXPMult) + "x,"}],
+                ["raw-html", () => { return "Point gain by " + format(player.r.replicantiPMult) + "x,"}],
+                ["raw-html", () => { return "Grist gain by " + format(player.r.replicantiGMult) + "x,"}],
+                ["raw-html", () => { return "Shale gain by " + format(player.r.replicantiSMult) + "x,"}],
+                ["raw-html", () => { return "Mercury gain by " + format(player.r.replicantiMMult) + "x"}],
+                ["raw-html", () => { return "[Another boost at ???]"}],
+                ["raw-html", () => { return "[Another boost at ???]"}],
+                ["raw-html", () => { return "[Another boost at ???]"}],
+                ["blank", "15px"],
+                ["raw-html", () => { return "Replication chance: " + format(player.r.replicantiChance) + "% every " + format(player.r.replicantiInterval.div(player.r.replicantiMultMult)) + " seconds"}],
+                ["blank", "15px"],
+                ["infobox","lore"],
+                ["clickable","11"]
+
+            ]
+        },
+        "Upgrades":
+        {
+            buttonStyle() { return { color: "black", background: "#55aabb", borderColor: "#11aaff", borderRadius: "5px" } },
+            content:
+            [
+                ["blank", "10px"],
+                ["raw-html", () => { return "You currently have <h2>" + format(player.r.points) + "</h2> replicanti."}, { "color": "white", "font-size": "16px", "font-family": "monospace" }],
+                ["blank", "30px"],
+                ["upgrades",11],
+                ["buyable",11]
+            ]
+        },
+        "Overflow":
+        {
+            buttonStyle() { return { color: "black", background: "#ffffff", borderColor: "#ffffff", borderRadius: "80px" } },
+            content:
+            [
+
+            ]
+        },
+    }
 }
 )
